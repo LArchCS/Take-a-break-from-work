@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-color: black;
+        }
+        div {
+            padding: 18px;
+            color: grey;
+        }
+        h1, h2 {
+            margin: 0px;
+        }
+        input[type=range] {
+            outline: none;
+            background: transparent; 
+            border-color: transparent;
+            color: transparent;
+            height: 18px;
+            cursor: pointer;
+            width: 272px;
+        }
+        .main {
+            color: white;
+        }
+        .collapsible {
+            padding-left: 18px;
+            background-color: black;
+            color: grey;
+            cursor: pointer;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+        }
+        .active, .collapsible:hover {
+            background-color: #555;
+            color: darkgrey;
+        }
+    </style>
+</head>
+
+<body onload="main()">
+    <div>
+        <h2 class="title">
+            <span id="displayDate" style="padding-right:12px"></span>
+            <span id="displayTime" style="padding-left:12px"></span>
+        </h2>
+    </div>
+    
+    <div id="atWork">
+        <span>WORKING...</span>
+        <h1 id="countAtWork" class="main"></h1>
+    </div>
+
+    <div id="atRest">
+        <span>RESTING...</span>
+        <h1 id="countAtRest" class="main"></h1>
+    </div>
+
+    <button class="collapsible" onclick="switchMode()">Switch Mode</button>
+    <button id="pause" class="collapsible" onclick="switchPause()">Pause</button>
+    <button class="collapsible" onclick="displayCalendar()">Calendar</button>
+    <button class="collapsible" onclick="displaySettings()">Settings</button>
+    
+    <div id="calendar">
+        <!-- Update this iframe with your own calendar.-->
+        <iframe src="https://calendar.google.com/calendar/embed?height=600&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=afl9mhqh3sgldgaatq1n6tfjec%40group.calendar.google.com&amp;color=%235229A3&amp;ctz=America%2FNew_York" style="border-width:0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+    </div>
+
+    <div id="settings">
+        <div>
+            <strong>Work</strong> (<span id="displayWork"></span>)<br>
+            <input type="range" id="workMinute" name="workMinute" min="0" max="30" onchange="setWork()" value="10">
+            <input type="range" id="workSecond" name="workSecond" min="0" max="6" onchange="setWork()" value="0">
+        </div>
+
+        <div>
+            <strong>Rest</strong> (<span id="displayRest"></span>)<br>
+            <input type="range" id="restMinute" name="restMinute" min="0" max="30" onchange="setRest()" value="1">
+            <input type="range" id="restSecond" name="restSecond" min="0" max="6" onchange="setRest()" value="6">
+        </div>
+        
+        <div>
+            <strong>Session Count</strong> (<span id="displayCurrentCount"></span>/<span id="displaySessionCount"></span>)<br>
+            <input type="range" id="currentCount" name="currentCount" min="0" max="9" onchange="setCurrentCount()" value="0">
+            <input type="range" id="sessionCount" name="sessionCount" min="1" max="10" onchange="setSessionCount()" value="2">
+        </div>
+
+        <div>
+            <strong>Session Rest</strong> (<span id="displaySessionRest"></span>)<br>
+            <input type="range" id="sessionRestMinute" name="sessionRestMinute" min="0" max="30" onchange="setSessionRest()" value="5">
+            <input type="range" id="sessionRestSecond" name="sessionRestSecond" min="0" max="6" onchange="setSessionRest()" value="0">
+        </div>
+    </div>
+</body>
+
+<script>
+const AT_WORK = document.getElementById("atWork");
+const AT_REST = document.getElementById("atRest");
+const SETTINGS = document.getElementById("settings");
+const CALENDAR = document.getElementById("calendar");
+const PAUSE = document.getElementById("pause");
+
+const WORK_MINUTE = document.getElementById('workMinute');
+const WORK_SECOND = document.getElementById('workSecond');
+const REST_MINUTE = document.getElementById('restMinute');
+const REST_SECOND = document.getElementById('restSecond');
+const CURRENT_COUNT = document.getElementById('currentCount');
+const SESSION_COUNT = document.getElementById('sessionCount');
+const SESSION_REST_MINUTE = document.getElementById('sessionRestMinute');
+const SESSION_REST_SECOND = document.getElementById('sessionRestSecond');
+
+const DISPLAY_WORK = document.getElementById('displayWork');
+const DISPLAY_REST = document.getElementById('displayRest');
+const DISPLAY_CURRENT_COUNT = document.getElementById('displayCurrentCount');
+const DISPLAY_SESSION_COUNT = document.getElementById('displaySessionCount');
+const DISPLAY_SESSION_REST = document.getElementById('displaySessionRest');
+
+const DISPLAY_DATE = document.getElementById('displayDate');
+const DISPLAY_TIME = document.getElementById('displayTime');
+const COUNT_AT_WORK = document.getElementById('countAtWork');
+const COUNT_AT_REST = document.getElementById('countAtRest');
+
+var work_duration = 0;
+var rest_duration = 0;
+var session_count = 0;
+var current_count = 0;
+var session_rest= 0;
+
+var work_count_down = 0;
+var rest_count_down = 0;
+
+var spam_count = 0; // to cap for continuously opening new windows (to notify user if regular notification is disabled)
+var is_notified = false; // if user has been notified
+var is_paused = false; // if pause counting
+
+function main() {
+    AT_WORK.style.display = "block";
+    AT_REST.style.display = "none";
+    SETTINGS.style.display = "none";
+    CALENDAR.style.display = "none";
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!Notification) {
+            alert('Desktop notifications not available in your browser. Try Chromium.'); 
+            return;
+        }
+        if (Notification.permission !== "granted") {
+            Notification.requestPermission();
+        }
+    });
+
+    window.addEventListener('keydown', function (e) {
+        switch (e.keyCode) {
+            case 27: // Escape
+                switchMode();
+                break;
+            case 80: // KeyP
+                switchPause();
+                break;
+            case 67: // KeyC
+                displayCalendar();
+                break;
+            case 83: // KeyS
+                displaySettings();
+                break;
+        }
+    });
+
+    setWork();
+    setRest();
+    setSessionCount();
+    setCurrentCount();
+    setSessionRest();
+
+    displayDate();
+    setInterval(displayDate, 1000 * 60 * 60);
+
+    displayTime();
+    setInterval(displayTime, 1000);
+    
+    countAtWork();
+    setInterval(countAtWork, 1000);
+    
+    countAtRest();
+    setInterval(countAtRest, 1000);
+}
+
+function switchMode() {
+    spam_count = 0;
+    is_notified = false;
+    is_paused && switchPause();
+    if (AT_WORK.style.display == "block") {
+        AT_WORK.style.display = "none";
+        AT_REST.style.display = "block";
+        if (work_count_down < 1) {
+            CURRENT_COUNT.value = (current_count + 1) % 10;
+            setCurrentCount();
+            work_count_down = work_duration;
+            console.log("current_count: " + current_count);
+        }
+        resetRestCountdown();
+        countAtRest();
+    } else {
+        AT_WORK.style.display = "block";
+        AT_REST.style.display = "none";
+        countAtWork();
+    }
+}
+
+function setWork() {
+    let min = WORK_MINUTE.value;
+    let sec = WORK_SECOND.value;
+    work_duration = parseInt(min) * 60 * 2 + parseInt(sec) * 10;
+    DISPLAY_WORK.innerHTML = formatTime(work_duration);
+    work_count_down = work_duration;
+}
+
+function setRest() {
+    let min = REST_MINUTE.value;
+    let sec = REST_SECOND.value;
+    rest_duration = parseInt(min) * 60 * 2 + parseInt(sec) * 10;
+    DISPLAY_REST.innerHTML = formatTime(rest_duration);
+    resetRestCountdown();
+}
+
+function setSessionRest() {
+    let min = SESSION_REST_MINUTE.value;
+    let sec = SESSION_REST_SECOND.value;
+    session_rest = parseInt(min) * 60 * 2 + parseInt(sec) * 10;
+    DISPLAY_SESSION_REST.innerHTML = formatTime(session_rest);
+    resetRestCountdown();
+}
+
+function resetRestCountdown() {
+    rest_count_down = (current_count % session_count === 0) ? session_rest : rest_duration;
+}
+
+function setCurrentCount() {
+    current_count = parseInt(CURRENT_COUNT.value);
+    DISPLAY_CURRENT_COUNT.innerHTML = current_count;
+}
+
+function setSessionCount() {
+    session_count = parseInt(SESSION_COUNT.value);
+    DISPLAY_SESSION_COUNT.innerHTML = session_count;
+}
+
+function switchPause() {
+    if (is_paused) {
+        is_paused = false;
+        PAUSE.innerHTML = "Pause";
+    } else {
+        is_paused = true;
+        PAUSE.innerHTML = "Paused";
+    }
+}
+
+function displaySettings() {
+    SETTINGS.style.display = SETTINGS.style.display == "block" ? "none" : "block";
+}
+
+function displayCalendar() {
+    CALENDAR.style.display = CALENDAR.style.display == "block" ? "none" : "block";
+}
+
+function countAtWork() {
+    if (!is_paused && AT_WORK.style.display == "block") {
+        if (work_count_down > 0) {
+            work_count_down -= 1;
+            COUNT_AT_WORK.innerHTML = formatTime(work_count_down);
+        } else {
+            if (document.hasFocus()) {
+                notifyByWindow();
+            } else if (!is_notified) {
+                notifyMe();
+            }
+        }
+    }
+}
+
+function countAtRest() {
+    if (!is_paused && AT_REST.style.display == "block") {
+        if (rest_count_down > 0) {
+            rest_count_down -= 1;
+            COUNT_AT_REST.innerHTML = formatTime(rest_count_down);
+        } else {
+            window.confirm("Back to work.") && switchMode();
+        }
+    }
+}
+
+function displayDate() {
+    let today = new Date();
+    let year = today.getFullYear();
+    let month = checkTime(today.getMonth() + 1);
+    let date = checkTime(today.getDate());
+    DISPLAY_DATE.innerHTML = year + "/" + month + "/" + date;
+}
+
+function displayTime() {
+    let today = new Date();
+    let h = checkTime(today.getHours());
+    let m = checkTime(today.getMinutes());
+    let s = checkTime(today.getSeconds());
+    DISPLAY_TIME.innerHTML = h + ":" + m + ":" + s;
+}
+
+function formatTime(time) {
+    let h = parseInt(time / 3600);
+    let m = parseInt(time % 3600 / 60);
+    let s = parseInt(time % 60);
+    return checkTime(h) + ":" + checkTime(m) + ":" + checkTime(s);
+}
+
+function checkTime(i) {
+    return (i < 10) ? "0" + i : i;
+}
+
+// Need to add "file:///*" to chrome://settings/content/notifications?search=notification to grant notification permission.
+function notifyMe() {
+  if (!("Notification" in window)) {
+    notifyByWindow();
+  } else if (Notification.permission === "granted") {
+    notifyByPop();
+  } else {
+    Notification.requestPermission(function (permission) {
+      if (permission === "granted") {
+        notifyByPop()
+      } else {
+        notifyByWindow();
+      }
+    });
+  }
+}
+
+function notifyByWindow() {
+    window.confirm("Take a break.") && switchMode();
+}
+
+function notifyByPop() {
+    let notification = new Notification("Take a break from your work!");
+    is_notified = true;
+    notification.onclick = function(event) {
+        notifyByWindow();
+    }
+    notification.onclose = function() {
+        is_notified = false;
+    };
+}
+</script>
+</html>
