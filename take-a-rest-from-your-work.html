@@ -138,6 +138,11 @@ var is_notified = false; // if user has been notified
 var is_paused = false; // if pause counting
 
 function main() {
+    AT_WORK.style.display = "block";
+    AT_REST.style.display = "none";
+    SETTINGS.style.display = "none";
+    CALENDAR.style.display = "none";
+
     document.addEventListener('DOMContentLoaded', function () {
         if (!Notification) {
             alert('Desktop notifications not available in your browser. Try Chromium.'); 
@@ -147,11 +152,6 @@ function main() {
             Notification.requestPermission();
         }
     });
-
-    AT_WORK.style.display = "block";
-    AT_REST.style.display = "none";
-    SETTINGS.style.display = "none";
-    CALENDAR.style.display = "none";
 
     window.addEventListener('keydown', function (e) {
         switch (e.keyCode) {
