@@ -64,11 +64,6 @@
     <button id="pause" class="collapsible" onclick="switchPause()">Pause</button>
     <button class="collapsible" onclick="displayCalendar()">Calendar</button>
     <button class="collapsible" onclick="displaySettings()">Settings</button>
-    
-    <div id="calendar">
-        <!-- Update this iframe with your own calendar.-->
-        <iframe src="https://calendar.google.com/calendar/embed?height=600&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=afl9mhqh3sgldgaatq1n6tfjec%40group.calendar.google.com&amp;color=%235229A3&amp;ctz=America%2FNew_York" style="border-width:0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
-    </div>
 
     <div id="settings">
         <div>
@@ -94,6 +89,11 @@
             <input type="range" id="sessionRestMinute" name="sessionRestMinute" min="0" max="30" onchange="setSessionRest()" value="5">
             <input type="range" id="sessionRestSecond" name="sessionRestSecond" min="0" max="6" onchange="setSessionRest()" value="0">
         </div>
+    </div>
+
+    <div id="calendar">
+        <!-- Update this iframe with your own calendar.-->
+        <iframe src="https://calendar.google.com/calendar/embed?height=600&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=afl9mhqh3sgldgaatq1n6tfjec%40group.calendar.google.com&amp;color=%235229A3&amp;ctz=America%2FNew_York" style="border-width:0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
     </div>
 </body>
 
@@ -138,11 +138,6 @@ var is_notified = false; // if user has been notified
 var is_paused = false; // if pause counting
 
 function main() {
-    AT_WORK.style.display = "block";
-    AT_REST.style.display = "none";
-    SETTINGS.style.display = "none";
-    CALENDAR.style.display = "none";
-
     document.addEventListener('DOMContentLoaded', function () {
         if (!Notification) {
             alert('Desktop notifications not available in your browser. Try Chromium.'); 
@@ -152,6 +147,11 @@ function main() {
             Notification.requestPermission();
         }
     });
+
+    AT_WORK.style.display = "block";
+    AT_REST.style.display = "none";
+    SETTINGS.style.display = "none";
+    CALENDAR.style.display = "none";
 
     window.addEventListener('keydown', function (e) {
         switch (e.keyCode) {
